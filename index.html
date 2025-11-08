@@ -36,12 +36,47 @@ limitations under the License.
     <h1>Service Worker Example</h1>
 
     <script>
-      window.addEventListener("load",()=>{
-        navigator.serviceWorker.register("./sw.js").then(()=>{
-          console.log("registered");
+      // Register service worker with update handling
+      window.addEventListener("load", () => {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('./sw.js')
+            .then((registration) => {
+              console.log('[App] Service Worker registered successfully');
+              
+              // Check for updates periodically
+              setInterval(() => {
+                registration.update();
+              }, 60000); // Check every minute
+              
+              // Handle service worker updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('[App] New service worker found, installing...');
+                
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[App] New service worker installed, ready to activate');
+                    // Optionally notify user about update
+                    if (confirm('New version available! Reload to update?')) {
+                      newWorker.postMessage({ type: 'SKIP_WAITING' });
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.error('[App] Service Worker registration failed:', error);
+            });
           
-        })
-      })
+          // Reload page when new service worker takes control
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('[App] New service worker activated');
+          });
+        } else {
+          console.warn('[App] Service Workers are not supported in this browser');
+        }
+      });
     </script>
     <script src="js/main.js"></script>
   </body>
